@@ -9,6 +9,7 @@ import {
   CATEGORY_LABEL,
   createEntry,
   deleteEntry,
+  downloadCSV,
 } from "@/lib/entries";
 import { createClient } from "@/lib/supabase/client";
 import BragCard from "@/components/BragCard";
@@ -131,7 +132,7 @@ export default function HomeClient({
             >
               + Registrar un logro
             </button>
-            <a
+            
               href="#registro"
               className="glass rounded-2xl px-6 py-3.5 font-display text-sm font-semibold text-white/80 transition-colors hover:text-white"
             >
@@ -152,20 +153,30 @@ export default function HomeClient({
 
         {/* Filters */}
         <section id="registro">
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full border px-3.5 py-1.5 font-mono text-xs transition-colors ${
-                  filter === f
-                    ? "border-vital-500/60 bg-vital-500/15 text-vital-300"
-                    : "border-white/10 text-white/50 hover:border-white/25 hover:text-white/80"
-                }`}
-              >
-                {f === "all" ? "Todo" : CATEGORY_LABEL[f]}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {FILTERS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-full border px-3.5 py-1.5 font-mono text-xs transition-colors ${
+                    filter === f
+                      ? "border-vital-500/60 bg-vital-500/15 text-vital-300"
+                      : "border-white/10 text-white/50 hover:border-white/25 hover:text-white/80"
+                  }`}
+                >
+                  {f === "all" ? "Todo" : CATEGORY_LABEL[f]}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => downloadCSV(sorted)}
+              disabled={sorted.length === 0}
+              className="glass flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-mono text-xs text-white/60 transition-colors hover:text-vital-300 disabled:opacity-40"
+            >
+              ↓ Descargar CSV
+            </button>
           </div>
 
           {sorted.length === 0 ? (

@@ -163,3 +163,33 @@ export function formatDate(iso: string): string {
 export function monthKey(iso: string): string {
   return iso.slice(0, 7); // yyyy-mm
 }
+
+export function entriesToCSV(entries: BragEntry[]): string {
+  const headers = ["Fecha", "Título", "Categoría", "Puesto", "Métrica", "Detalle", "Tags"];
+  const rows = entries.map((e) => [
+    e.date,
+    e.title,
+    CATEGORY_LABEL[e.category],
+    e.role ?? "",
+    e.metric ?? "",
+    e.detail,
+    e.tags.join("; "),
+  ]);
+
+  const escape = (val: string) => `"${val.replace(/"/g, '""')}"`;
+
+  return [headers, ...rows]
+    .map((row) => row.map((cell) => escape(String(cell))).join(","))
+    .join("\n");
+}
+
+export function downloadCSV(entries: BragEntry[]) {
+  const csv = "\uFEFF" + entriesToCSV(entries); // BOM so Excel abre acentos bien
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `brag-signal-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
