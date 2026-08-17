@@ -1,9 +1,12 @@
 -- Run this once in the Supabase SQL editor (Project > SQL Editor > New query).
+-- If you already created the old (no-auth) version of this table, see the
+-- migration block at the bottom instead of running this from scratch.
 
 create extension if not exists "pgcrypto";
 
 create table if not exists entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   detail text default '',
   metric text,
@@ -16,12 +19,34 @@ create table if not exists entries (
 
 alter table entries enable row level security;
 
--- This app has no login system — it's a single-user personal tool guarded
--- only by knowledge of your Supabase URL/anon key. That's fine for a
--- private brag document, but don't reuse this policy for anything with
--- data you'd mind becoming public if the keys leaked.
-create policy "public read" on entries for select using (true);
-create policy "public insert" on entries for insert with check (true);
-create policy "public delete" on entries for delete using (true);
+-- Each user can only see and modify their own entries.
+create policy "select own entries" on entries
+  for select using (auth.uid() = user_id);
+
+create policy "insert own entries" on entries
+  for insert with check (auth.uid() = user_id);
+
+create policy "delete own entries" on entries
+  for delete using (auth.uid() = user_id);
 
 create index if not exists entries_entry_date_idx on entries (entry_date desc);
+create index if not exists entries_user_id_idx on entries (user_id);
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- MIGRATION: if you already have the old table (no user_id, public RLS),
+-- run this instead of the create table above:
+--
+-- alter table entries add column user_id uuid references auth.users(id) on delete cascade;
+-- -- backfill existing rows with your own user id (find it in
+-- -- Authentication > Users after you sign up), then:
+-- -- update entries set user_id = 'YOUR-USER-UUID-HERE' where user_id is null;
+-- alter table entries alter column user_id set not null;
+--
+-- drop policy if exists "public read" on entries;
+-- drop policy if exists "public insert" on entries;
+-- drop policy if exists "public delete" on entries;
+--
+-- create policy "select own entries" on entries for select using (auth.uid() = user_id);
+-- create policy "insert own entries" on entries for insert with check (auth.uid() = user_id);
+-- create policy "delete own entries" on entries for delete using (auth.uid() = user_id);
+-- ─────────────────────────────────────────────────────────────────────────

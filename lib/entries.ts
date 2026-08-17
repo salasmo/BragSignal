@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type EntryCategory = "impact" | "shipped" | "learned" | "recognition";
 
@@ -104,13 +104,17 @@ function rowToEntry(row: any): BragEntry {
 }
 
 /**
- * Fetches all entries from Supabase, newest first.
+ * Fetches all entries for the current user, newest first.
+ * Takes a Supabase client so it works from both Server Components
+ * (lib/supabase/server) and the browser (lib/supabase/client).
  * Returns { entries, error }. On error (e.g. Supabase not configured yet),
  * callers fall back to SEED_ENTRIES so the page still renders something
  * useful instead of an empty state or a spinner.
  */
-export async function fetchEntries(): Promise<{ entries: BragEntry[]; error: string | null }> {
-  const { data, error } = await supabase
+export async function fetchEntries(
+  client: SupabaseClient
+): Promise<{ entries: BragEntry[]; error: string | null }> {
+  const { data, error } = await client
     .from("entries")
     .select("*")
     .order("entry_date", { ascending: false });
@@ -121,10 +125,16 @@ export async function fetchEntries(): Promise<{ entries: BragEntry[]; error: str
   return { entries: (data ?? []).map(rowToEntry), error: null };
 }
 
-export async function createEntry(entry: NewBragEntry): Promise<BragEntry> {
-  const { data, error } = await supabase
+export async function createEntry(client: SupabaseClient, entry: NewBragEntry): Promise<BragEntry> {
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) throw new Error("Tu sesión expiró. Inicia sesión de nuevo.");
+
+  const { data, error } = await client
     .from("entries")
     .insert({
+      user_id: user.id,
       title: entry.title,
       detail: entry.detail,
       metric: entry.metric ?? null,
@@ -140,8 +150,8 @@ export async function createEntry(entry: NewBragEntry): Promise<BragEntry> {
   return rowToEntry(data);
 }
 
-export async function deleteEntry(id: string): Promise<void> {
-  const { error } = await supabase.from("entries").delete().eq("id", id);
+export async function deleteEntry(client: SupabaseClient, id: string): Promise<void> {
+  const { error } = await client.from("entries").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
 

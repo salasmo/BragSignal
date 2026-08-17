@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   BragEntry,
   EntryCategory,
@@ -9,6 +10,7 @@ import {
   createEntry,
   deleteEntry,
 } from "@/lib/entries";
+import { createClient } from "@/lib/supabase/client";
 import BragCard from "@/components/BragCard";
 import AddEntryModal from "@/components/AddEntryModal";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
@@ -22,14 +24,19 @@ const FILTERS: Array<EntryCategory | "all"> = ["all", "impact", "shipped", "lear
 export default function HomeClient({
   initialEntries,
   loadError,
+  userEmail,
 }: {
   initialEntries: BragEntry[];
   loadError: string | null;
+  userEmail: string | null;
 }) {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
   const [entries, setEntries] = useState<BragEntry[]>(initialEntries);
   const [filter, setFilter] = useState<EntryCategory | "all">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [banner, setBanner] = useState<string | null>(loadError ? "load" : null);
+  const [signingOut, setSigningOut] = useState(false);
 
   const visible = useMemo(
     () => (filter === "all" ? entries : entries.filter((e) => e.category === filter)),
@@ -42,7 +49,7 @@ export default function HomeClient({
   );
 
   async function handleSave(newEntry: NewBragEntry) {
-    const created = await createEntry(newEntry);
+    const created = await createEntry(supabase, newEntry);
     setEntries((prev) => [created, ...prev]);
   }
 
@@ -50,11 +57,18 @@ export default function HomeClient({
     const prev = entries;
     setEntries((cur) => cur.filter((e) => e.id !== id));
     try {
-      await deleteEntry(id);
+      await deleteEntry(supabase, id);
     } catch {
       setEntries(prev); // revert on failure
       setBanner("delete");
     }
+  }
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
   }
 
   const metricsCount = entries.filter((e) => e.metric).length;
@@ -62,7 +76,21 @@ export default function HomeClient({
   return (
     <>
       <main className="relative z-10 mx-auto max-w-5xl px-5 pb-32 pt-8 sm:px-8 sm:pt-12">
-        <Breadcrumbs siteUrl={SITE_URL} items={[{ label: "Inicio", href: "/" }]} />
+        <div className="mb-6 flex items-center justify-between">
+          <Breadcrumbs siteUrl={SITE_URL} items={[{ label: "Inicio", href: "/" }]} />
+          {userEmail && (
+            <div className="flex items-center gap-3">
+              <span className="hidden font-mono text-xs text-white/40 sm:inline">{userEmail}</span>
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="rounded-lg border border-white/10 px-3 py-1.5 font-mono text-xs text-white/50 transition-colors hover:border-white/25 hover:text-white/80 disabled:opacity-50"
+              >
+                {signingOut ? "Saliendo…" : "Cerrar sesión"}
+              </button>
+            </div>
+          )}
+        </div>
 
         {banner === "load" && (
           <div className="glass mb-6 rounded-xl border border-amber-400/30 px-4 py-3 text-xs text-amber-200">

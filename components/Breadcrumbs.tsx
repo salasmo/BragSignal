@@ -16,7 +16,7 @@ export default function Breadcrumbs({ items, siteUrl }: { items: Crumb[]; siteUr
   };
 
   return (
-    <nav aria-label="Breadcrumb" className="mb-6">
+    <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-2 font-mono text-xs text-white/50">
         {items.map((item, i) => (
           <li key={item.href} className="flex items-center gap-2">
