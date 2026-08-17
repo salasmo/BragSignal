@@ -132,7 +132,7 @@ export default function HomeClient({
             >
               + Registrar un logro
             </button>
-            
+            <a
               href="#registro"
               className="glass rounded-2xl px-6 py-3.5 font-display text-sm font-semibold text-white/80 transition-colors hover:text-white"
             >

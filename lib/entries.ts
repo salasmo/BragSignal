@@ -184,7 +184,7 @@ export function entriesToCSV(entries: BragEntry[]): string {
 }
 
 export function downloadCSV(entries: BragEntry[]) {
-  const csv = "\uFEFF" + entriesToCSV(entries); // BOM so Excel abre acentos bien
+  const csv = "\uFEFF" + entriesToCSV(entries); // BOM so Excel opens accents correctly
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
